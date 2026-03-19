@@ -12,6 +12,9 @@ data/
 *.bbl
 *.blg
 
+# Overleaf (separate git repo)
+writing/neurips/
+
 # IDE
 .vscode/
 .claude/
