@@ -15,6 +15,16 @@ data/
 # Overleaf (separate git repo)
 writing/neurips/
 
+# Sensitive
+api_keys.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+logs/
+
 # IDE
 .vscode/
 .claude/

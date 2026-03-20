@@ -2,11 +2,18 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{hyperref}
 \usepackage{booktabs}
+\usepackage{amsmath}
 \usepackage{enumitem}
+\usepackage{changepage}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{multirow}
 
 \title{IntentShield Project Progress Tracker}
 \author{Tim}
 \date{Started: 2026-03-19}
+
+\setcounter{secnumdepth}{0}
 
 \begin{document}
 \maketitle
@@ -17,10 +24,33 @@
 \section{2026-03-19}
 %% ============================================================
 
-\subsection{Task 1: Concept Erasure Papers --- OpenReview Survey (ICLR 2026)}
+\subsection{Task 1: Concept Erasure Papers}
 
 Goal: investigate how reviewers evaluate concept erasure methods on OpenReview, focusing on the two ICLR'26 papers cited in our related work (SPEED, HiRM). Look for any discussion of compositional attacks or structural limitations.
 
+\begin{table}[h]
+\centering
+\caption{Recent concept erasure methods and their evaluation models.}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\textwidth}{@{} p{2.2cm} p{2.5cm} X @{}}
+\toprule
+\textbf{Paper} & \textbf{Eval Model} & \textbf{OpenReview Weaknesses} \\
+\midrule
+SPEED \scriptsize{[ICLR'26, 8/6/6/6]} & SD 1.4 & (1) Erasure not thorough---CLIP scores higher than RECE/MACE, residual patterns remain (2) Robustness: paraphrased prompts can recover erased concepts (3) Background changes in output images after concept removal \\
+HiRM \scriptsize{[ICLR'26, 4/4/6/4]} & SD 1.4 & (1) Simple extension of RMU to diffusion models (2) Text encoder modification easily bypassed by swapping encoder (3) Limited multi-concept scalability (4) Small gains over Diff-Q; underperforms on adversarial attacks (UnlearnDiffAtk, MMA) \\
+EraseAnything \scriptsize{[ICML'25]} & FLUX.1-dev & N/A (not on OpenReview) \\
+TRACE \scriptsize{[ICLR'26 rejected, 6/6/4/4]} & SD 3.5, FLUX, Infinity-2B/8B, SD 1.5 & (1) No NSFW evaluation despite being key motivation (2) No failure mode discussion for overlapping concepts (3) FID insufficient---should include HPSv3/Aesthetics (4) Limited baselines, missing training-based methods (5) Computational cost not reported \\
+Diversified Unlearning \scriptsize{[ICLR'26 under review, 2/6/6/2]} & SD 1.4 & (1) Only SD 1.4, no generalization to SD 3.5/FLUX (2) Marginal preservation improvements (3) No comparison with adversarial unlearning methods (AdvUnlearn, RACE, RECE) (4) ChatGPT-generated prompts---hallucination risk, unclear how many needed (5) Embedding vector sum may destroy semantics \\
+Prototype-Guided \scriptsize{[arXiv'25]} & SD 1.4, SDXL, SD 3.5 & N/A (arXiv preprint) \\
+EraseAnything++ \scriptsize{[arXiv'25]} & Flux.1-dev, Open-Sora & N/A (arXiv preprint) \\
+DVE \scriptsize{[arXiv'25]} & Flux.1-dev & N/A (arXiv preprint) \\
+SURE \scriptsize{[ICLR'26 under review, 2/4/4/2]} & SD 1.4 & (1) Lipschitz regularization lacks theoretical justification (2) Only tested on similar subcategories, unclear for diverse categories (3) Three of four loss components borrowed from prior work (4) Concept space limited to 100 CLIP words---may miss fine-grained subcategories \\
+\bottomrule
+\end{tabularx}
+\label{tab:concept_erasure}
+\end{table}
+
+\begin{adjustwidth}{1.5em}{}
 \subsubsection{SPEED (ICLR'26 Poster)}
 
 \begin{itemize}
@@ -31,12 +61,220 @@ Goal: investigate how reviewers evaluate concept erasure methods on OpenReview, 
   \item Method: Null space, SVD, erased concept mapping to existing concepts.
 \end{itemize}
 
+\end{adjustwidth}
+
+\begin{adjustwidth}{1.5em}{}
 \subsubsection{HiRM (ICLR'26 Poster)}
 
 \begin{itemize}
   \item \textbf{Title:} Localized Concept Erasure in Text-to-Image Diffusion Models via High-Level Representation Misdirection
   \item \textbf{Authors:} Uichan Lee, Jeonghyeon Kim, Sangheum Hwang
   \item \textbf{OpenReview:} \url{https://openreview.net/forum?id=JSjOlFLUsS}
+\end{itemize}
+
+\end{adjustwidth}
+
+\begin{adjustwidth}{1.5em}{}
+\subsubsection{EraseAnything (ICML'25)}
+
+\begin{itemize}
+  \item \textbf{Title:} EraseAnything: Enabling Concept Erasure in Rectified Flow Transformers
+  \item \textbf{Authors:} Daiheng Gao et al.
+  \item \textbf{arXiv:} \url{https://arxiv.org/abs/2412.20413}
+  \item \textbf{Architecture:} FLUX (rectified flow transformer / MMDiT). Paper claims SD3 support but code is FLUX-only.
+  \item Method: Bi-level optimization with LoRA on \texttt{add\_q\_proj}/\texttt{add\_k\_proj}. Lower level erases target concept (ESD loss + attention regularizer); upper level preserves unrelated concepts (LoRA reconstruction + reverse self-contrastive loss). 3.57\,MB per concept.
+  \item \textbf{Note:} Only existing concept erasure work on flow-based T2I models. Could potentially be adapted to SD~3.5 (same MMDiT architecture).
+\end{itemize}
+
+\end{adjustwidth}
+
+
+\begin{adjustwidth}{1.5em}{}
+\subsubsection{Prototype-Guided Concept Erasure (arXiv'25)}
+
+\begin{itemize}
+  \item \textbf{Title:} Prototype-Guided Concept Erasure in Diffusion Models
+  \item \textbf{arXiv:} \url{https://arxiv.org/abs/2603.08271}
+  \item \textbf{Eval:} SD 1.4 (main), SDXL, SD 3.5 (compatibility test).
+  \item Method: Training-free. k-means clustering on concept embeddings to form prototypes; steers generation away from prototypes using near-miss pairs. Supports multi-concept erasure and broad categories (I2P).
+  \item \textbf{Note:} One of few training-free methods tested on SD~3.5. Reports Ring-A-Bell/P4D/UnDiff ASR on SD~3.5.
+\end{itemize}
+
+\end{adjustwidth}
+
+\begin{adjustwidth}{1.5em}{}
+\subsubsection{EraseAnything++ (arXiv'25)}
+
+\begin{itemize}
+  \item \textbf{Title:} EraseAnything++: Enabling Concept Erasure in Rectified Flow Transformers Leveraging Multi-Object Optimization
+  \item \textbf{arXiv:} \url{https://arxiv.org/abs/2603.00978}
+  \item \textbf{Eval:} Flux.1-dev (image), Open-Sora (video).
+  \item Method: Extension of EraseAnything with multi-objective optimization (Pareto), reverse self-contrastive loss, and volumetric attention regularization for video. LoRA-based on MMDiT.
+  \item \textbf{Note:} First concept erasure work on video diffusion models. Also tested entity/abstraction/relationship categories.
+\end{itemize}
+
+\end{adjustwidth}
+
+\begin{adjustwidth}{1.5em}{}
+\subsubsection{DVE -- Differential Vector Erasure (arXiv'25)}
+
+\begin{itemize}
+  \item \textbf{Title:} Differential Vector Erasure: Unified Training-Free Concept Erasure for Flow Matching Models
+  \item \textbf{arXiv:} \url{https://arxiv.org/abs/2602.01089}
+  \item \textbf{Eval:} Flux.1-dev.
+  \item Method: Training-free. Computes differential velocity vector between anchor and erase concepts, projects out harmful direction from generation trajectory. No fine-tuning needed.
+  \item \textbf{Note:} Best ASR on Flux across I2P/MMA/RaB. Training-free approach achieving SOTA on flow-matching models.
+\end{itemize}
+
+\end{adjustwidth}
+
+\begin{adjustwidth}{1.5em}{}
+\subsubsection{SURE -- Subcategorical Erasure (ICLR'26 under review)}
+
+\begin{itemize}
+  \item \textbf{Title:} Achieving Subcategorical Erasure in Text-to-Image Models
+  \item \textbf{OpenReview:} \url{https://openreview.net/forum?id=1K7TSEe2x5}
+  \item \textbf{Scores:} 2, 4, 4, 2
+  \item \textbf{Eval:} SD 1.4.
+  \item Method: Lipschitz regularization to ensure smooth model behavior around target category, enabling erasure of all subcategories using only the parent category label. Neutral eraser + preservation objective.
+  \item \textbf{Note:} Addresses subcategory erasure problem (erase ``guns'' erases all gun types). Only SD~1.4.
+\end{itemize}
+
+\end{adjustwidth}
+
+
+\subsection{Task 2: COCO Score Calculation}
+
+Goal: generate 1,000 images from MS-COCO captions (following SPEED's protocol) using SD~1.4 and SD~3.5-Medium, then compute CLIP Score to measure text--image alignment.
+
+\begin{itemize}
+  \item Captions: first 1,000 from \texttt{mscoco.csv} (COCO val2014, sourced from SPEED repo).
+  \item CLIP model: \texttt{openai/clip-vit-large-patch14}.
+  \item SD~1.4: 20 inference steps, guidance scale 7.5.
+  \item SD~3.5-Medium: 28 inference steps, guidance scale 7.5.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\caption{CLIP Score ($\times 100$) on 1,000 COCO captions.}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Model} & \textbf{CLIP Score} & \textbf{FID} \\
+\midrule
+SD 1.4         & 26.61 & -- \\
+SD 1.4 (SPEED) & 26.53 & -- \\
+SD 3.5-Medium  & 27.03 & -- \\
+\bottomrule
+\end{tabular}
+\label{tab:coco_clip}
+\end{table}
+
+
+\subsection{Task 3: Defense Methods Evaluation}
+
+Goal: demonstrate that existing defense methods fail on compositional attacks (CompHarm benchmark, SD~3.5-Medium).
+
+Reproduced SPEED's instance erasure on SD~1.4, erasing ``Snoopy''. Left: original SD~1.4; Right: after SPEED erasure.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.45\textwidth]{figs/snoopy_compare.jpg}
+\includegraphics[width=0.45\textwidth]{figs/snoopy_compare2.jpg}\\[0.5em]
+\includegraphics[width=0.45\textwidth]{figs/snoopy_compare3.jpg}
+\includegraphics[width=0.45\textwidth]{figs/snoopy_compare4.jpg}
+\caption{SPEED erasure of Snoopy on SD~1.4. Left: original; Right: after erasure.}
+\label{fig:snoopy}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\caption{Existing defense methods to evaluate. ASR (\%) detected by NudeNet (threshold 0.6), lower is better. Results from original papers.}
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{} p{1.5cm} p{2cm} l c c c c c X @{}}
+\toprule
+\textbf{Paradigm} & \textbf{Method} & \textbf{Eval Model} & \textbf{I2P$\downarrow$} & \textbf{MMA$\downarrow$} & \textbf{RaB$\downarrow$} & \textbf{CLIP$\uparrow$} & \textbf{FID$\downarrow$} & \textbf{Note} \\
+\midrule
+\multirow{3}{*}{\shortstack[l]{Training-free\\guidance}}
+ & SAFREE \scriptsize{[ICLR'25]} & SD 1.4 & -- & -- & -- & -- & -- & \\
+ & SafeDenoiser \scriptsize{[NeurIPS'25]} & SD 1.4 & -- & -- & -- & -- & -- & \\
+ & STG \scriptsize{[NeurIPS'25]} & SD 1.4 & -- & -- & -- & -- & -- & \\
+\midrule
+\multirow{4}{*}{\shortstack[l]{Concept\\erasure}}
+ & MACE \scriptsize{[CVPR'24]} & SD 1.4 & 1.19 & 1.60 & 2.11 & 0.293 & 12.32 & from HiRM T3 \\
+ & SPEED \scriptsize{[ICLR'26]} & SD 1.4 & 0.20 & 0.24 & 0.20 & 0.263 & 37.82 & w/o AT; T9 \\
+ & SPEED w/ AT \scriptsize{[ICLR'26]} & SD 1.4 & 0.10 & 0.01 & 0.00 & 0.260 & 39.51 & w/ AT; T9 \\
+ & HiRM-S \scriptsize{[ICLR'26]} & SD 1.4 & 0.66 & 3.30 & 0.00 & 0.306 & 6.75 & K-77; T3 \\
+ & HiRM-R \scriptsize{[ICLR'26]} & Flux & 3.23 & 9.70 & 44.21 & 0.308 & -- & K-77; T4 \\
+ & TRACE \scriptsize{[rejected]} & SD 3.5 & -- & 37.21$^\dagger$ & 25.21$^\dagger$ & -- & -- & $^\dagger$style erasure robustness, not nudity \\
+ & TRACE \scriptsize{[rejected]} & Flux & -- & 18.89$^\dagger$ & 15.62$^\dagger$ & -- & -- & $^\dagger$style erasure robustness, not nudity \\
+ & Div.\ Unlearn \scriptsize{[rejected]} & SD 1.4 & $^*$172 & -- & 38.95 & 0.310 & 14.21 & $^*$I2P NudeNet total count; RaB K16 ASR; best variant (Div-AP) \\
+ & EraseAnything \scriptsize{[ICML'25]} & Flux & 4.70 & 11.20 & 58.90 & 0.302 & 21.75 & RaB Ring16; from DVE T2 \\
+ & EraseAnything++ \scriptsize{[arXiv'25]} & Flux & $^*$182 & -- & -- & 0.304 & 21.67 & $^*$I2P NudeNet total; TII \\
+ & DVE \scriptsize{[arXiv'25]} & Flux & 2.40 & 7.10 & 5.30 & 0.300 & 21.70 & Training-free; RaB Ring16; T2 \\
+ & Prototype-Guided \scriptsize{[arXiv'25]} & SD 1.4 & $^\ddagger$5.2 & -- & 6.70 & -- & -- & $^\ddagger$I2P Q16 overall; RaB ASR; T1-2 \\
+ & Prototype-Guided \scriptsize{[arXiv'25]} & SD 3.5 & -- & -- & 31.00 & -- & -- & Training-free; RaB ASR; T3 \\
+ & SURE \scriptsize{[under review]} & SD 1.4 & $^\S$1.70 & -- & -- & -- & 14.02 & $^\S$NER-0.3; T2 \\
+\midrule
+Prompt filt. & SafeGuider \scriptsize{[CCS'25]} & SD 1.4 & -- & -- & -- & -- & -- & \\
+\bottomrule
+\end{tabularx}
+\label{tab:defense}
+\end{table}
+
+
+\subsection{Task 4: SPEED on SD 3.5 (Try 1)}
+
+Goal: adapt SPEED's concept erasure from SD~1.4 (UNet) to SD~3.5-Medium (MMDiT).
+
+\subsubsection{Architecture Mapping}
+
+\begin{tabular}{@{} l l l @{}}
+\toprule
+& \textbf{SD 1.4} & \textbf{SD 3.5} \\
+\midrule
+Backbone & UNet & MMDiT (24 transformer blocks) \\
+Edited layers & \texttt{attn2.to\_k/v} & \texttt{attn.add\_k/v\_proj} \\
+Text encoder & CLIP (768-d) & CLIP-L + CLIP-G + T5 $\to$ 4096-d \\
+Embedding dim & 768 & 4096 $\xrightarrow{\texttt{context\_embedder}}$ 1536 \\
+\bottomrule
+\end{tabular}
+
+\subsubsection{Key Issue: Weight Delta Too Large}
+
+With default SPEED hyperparams, the null space covers $>$98\% of the 1536-d embedding space (vs.\ 768-d in SD~1.4), causing destructive weight updates. Added \texttt{edit\_scale} parameter to control delta magnitude.
+
+\begin{tabular}{@{} l c l @{}}
+\toprule
+\textbf{Config} & \textbf{$\Delta W / W$} & \textbf{Result} \\
+\midrule
+Default (scale=1.0, no retain) & 4.2$\times$ & Noise output \\
+scale=1.0, retain=instance.csv & 2.5$\times$ & Still broken \\
+scale=0.3, retain=instance.csv & 0.75$\times$ & Image OK but erasure messy \\
+scale=0.1, retain=instance.csv & 0.25$\times$ & Image OK but Snoopy preserved \\
+\bottomrule
+\end{tabular}
+
+\subsubsection{Best Result (scale=0.3 + retain set)}
+
+Snoopy identity is disrupted but output becomes incoherent --- not a clean erasure.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.45\textwidth]{figs/sd35_snoopy_doghouse.jpg}
+\includegraphics[width=0.45\textwidth]{figs/sd35_snoopy_woodstock.jpg}\\[0.5em]
+\includegraphics[width=0.45\textwidth]{figs/sd35_snoopy_photo.jpg}
+\caption{SPEED on SD~3.5 (scale=0.3, retain=instance.csv). Left: original; Right: after erasure. Erasure disrupts images rather than cleanly removing the concept.}
+\label{fig:sd35_snoopy}
+\end{figure}
+
+\subsubsection{Takeaway}
+
+SPEED's null-space projection does not transfer well to MMDiT. The joint attention architecture responds differently to selective weight editing than UNet cross-attention. Possible next steps:
+\begin{itemize}
+  \item Edit only later transformer blocks (preserve structural layers).
+  \item Edit \texttt{context\_embedder} (global 4096$\to$1536 projection) instead of per-block layers.
+  \item Adapt EraseAnything's LoRA-based approach (designed for MMDiT).
 \end{itemize}
 
 
