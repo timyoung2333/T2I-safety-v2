@@ -46,6 +46,7 @@ Prototype-Guided \scriptsize{[CVPR'26]} & SD 1.4, SDXL, SD 3.5 & N/A \\
 EraseAnything++ \scriptsize{[arXiv'25]} & Flux.1-dev, Open-Sora & N/A (arXiv preprint) \\
 DVE \scriptsize{[ICML'26 under review]} & Flux.1-dev & N/A (arXiv preprint) \\
 SURE \scriptsize{[ICLR'26 under review, 2/4/4/2]} & SD 1.4 & (1) Lipschitz regularization lacks theoretical justification (2) Only tested on similar subcategories, unclear for diverse categories (3) Three of four loss components borrowed from prior work (4) Concept space limited to 100 CLIP words---may miss fine-grained subcategories \\
+PromptGuard \scriptsize{[NeurIPS'25]} & SD 1.4 & N/A \\
 \bottomrule
 \end{tabularx}
 \label{tab:concept_erasure}
@@ -286,11 +287,94 @@ SPEED's null-space projection does not transfer well to MMDiT. The joint attenti
 
 \subsection{Task 1: Choose Defense Methods Based on Paradigm}
 
+We categorize existing T2I safety defenses into three paradigms:
+
+\begin{table}[h]
+\centering
+\caption{Defense paradigms and representative methods.}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{} p{3cm} p{5cm} X @{}}
+\toprule
+\textbf{Paradigm} & \textbf{Description} & \textbf{Methods} \\
+\midrule
+Input-level & Intercept or rewrite the prompt before it enters the model. & SafeGuider \scriptsize{(SD 1.4)}, Latent Guard \scriptsize{(SD 1.4)}, PromptGuard \scriptsize{(SD 1.4)} \\
+Inference-time guidance & Steer the denoising process at inference without modifying model weights. & SAFREE \scriptsize{(SD 1.4, SDXL)}, SafeDenoiser \scriptsize{(SD 1.4)}, STG \scriptsize{(SD 1.4)}, Prototype-Guided \scriptsize{(SD 1.4, SDXL, SD 3.5)}, DVE \scriptsize{(Flux)} \\
+Weight editing & Permanently modify model parameters to erase target concepts. & MACE \scriptsize{(SD 1.4)}, HiRM \scriptsize{(SD 1.4)}, SPEED \scriptsize{(SD 1.4)}, ESD \scriptsize{(SD 1.4)}, TRACE \scriptsize{(SD 1.5, SD 3.5, Flux)}, EraseAnything \scriptsize{(Flux)} \\
+\bottomrule
+\end{tabularx}
+\label{tab:paradigms}
+\end{table}
+
+Key argument: all three paradigms operate at the token/concept level and lack reasoning about entity relationships. Compositional intent attacks --- where each token is benign but the combination is harmful --- bypass all of them.
+
 \subsection{Task 2: Recheck Existing Benchmarks}
 
-\subsection{Task 3: Rethink a Better Way to Tell Attack Story}
+Consolidated safety benchmark results from original papers. ASR (\%) = fraction of generated images deemed unsafe, lower is better.
 
-\subsection{Task 4: New Method Design Tryout}
+\begin{table}[H]
+\centering
+\caption{Comprehensive safety benchmark results of defense methods (from original papers).}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{} l l l c c c c c c c @{}}
+\toprule
+\textbf{Paradigm} & \textbf{Method} & \textbf{Model} & \textbf{I2P$\downarrow$} & \textbf{P4D$\downarrow$} & \textbf{RaB$\downarrow$} & \textbf{MMA$\downarrow$} & \textbf{UnDiff$\downarrow$} & \textbf{CLIP$\uparrow$} & \textbf{FID$\downarrow$} \\
+\midrule
+\multirow{2}{*}{\shortstack[l]{Input-\\level}}
+ & SafeGuider & SD 1.4 & 5.48 & 0.46 & 0.01 & 2.05 & -- & 0.275 & -- \\
+ & Latent Guard & SD 1.4 & -- & -- & -- & -- & -- & -- & -- \\
+ & PromptGuard & SD 1.4 & -- & -- & -- & 5.53 & -- & 0.260 & -- \\
+\midrule
+\multirow{8}{*}{\shortstack[l]{Inf.-time\\guidance}}
+ & SAFREE & SD 1.4 & 3.40 & 38.40 & 11.40 & 58.50 & 28.20 & 0.311 & 36.35 \\
+ & SAFREE & SDXL & -- & 28.50 & 24.10 & 16.90 & 24.60 & 0.278 & -- \\
+ & SAFREE & SD 3 & -- & 27.10 & 43.00 & 16.50 & 30.20 & 0.316 & -- \\
+ & SafeDenoiser & SD 1.4 & -- & -- & 12.70 & 46.90 & 20.70 & 0.307 & 22.55 \\
+ & STG & SD 1.4 & -- & -- & 12.00 & -- & -- & 0.311 & 22.00 \\
+ & Proto-Guided & SD 1.4 & 5.20 & 14.50 & 6.70 & -- & 13.30 & -- & 45.10 \\
+ & Proto-Guided & SD 3.5 & -- & 9.00 & 31.00 & -- & 8.00 & -- & -- \\
+ & DVE & Flux & 2.40 & -- & 5.30 & 7.10 & -- & 0.300 & 21.70 \\
+\midrule
+\multirow{9}{*}{\shortstack[l]{Weight\\editing}}
+ & ESD & SD 1.4 & -- & 78.80 & 51.30 & -- & 77.50 & -- & 33.30 \\
+ & MACE & SD 1.4 & 1.19 & -- & 2.11 & 1.60 & -- & 0.293 & 12.32 \\
+ & SPEED & SD 1.4 & 0.20 & -- & 0.20 & 0.24 & -- & 0.263 & 37.82 \\
+ & SPEED w/ AT & SD 1.4 & 0.10 & -- & 0.00 & 0.01 & -- & 0.260 & 39.51 \\
+ & HiRM-S & SD 1.4 & 0.66 & -- & 0.00 & 3.30 & -- & 0.306 & 6.75 \\
+ & HiRM-R & Flux & 3.23 & -- & 44.21 & 9.70 & -- & 0.308 & -- \\
+ & TRACE & SD 3.5 & -- & -- & 25.21 & 37.21 & -- & -- & -- \\
+ & TRACE & Flux & -- & -- & 15.62 & 18.89 & -- & -- & -- \\
+ & EraseAnything & Flux & 4.70 & -- & 58.90 & 11.20 & -- & 0.302 & 21.75 \\
+\bottomrule
+\end{tabular}
+\label{tab:benchmark_all}
+\end{table}
+
+\textbf{Observations:}
+\begin{itemize}[nosep]
+  \item Weight editing methods (SPEED, HiRM) achieve lowest ASR but at the cost of CLIP/FID degradation.
+  \item Inference-time methods (SAFREE, Prototype-Guided) preserve quality better but have higher ASR, especially on adversarial attacks (MMA, P4D).
+  \item SafeGuider achieves strong results across all attacks with minimal quality loss --- but only tested on SD 1.4.
+  \item Few methods are evaluated on SD 3.5 or Flux; cross-model generalization is largely untested.
+  \item \textbf{None of these benchmarks test compositional intent attacks.}
+\end{itemize}
+
+\clearpage
+
+\section{2026-03-21}
+\subsection{Task 1: What methods do existing papers compare? How do they tell their stories?}
+
+Don't need to understand everything. Focus on how they tell the story.
+
+\subsection{Task 2: Rethink a Better Way to Tell Attack Story}
+
+\subsection{Task 3: Show other methods do not work on one case in our method}
+
+For example, IED. 5 examples about explosive devices.
+
+\subsection{Task 4: Show our method works on the same case}
+
+\subsection{Task 5: }
 
 
 \end{document}
