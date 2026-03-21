@@ -25,6 +25,9 @@ __pycache__/
 # Logs
 logs/
 
+# Large files
+refs/defense/*.pdf
+
 # IDE
 .vscode/
 .claude/

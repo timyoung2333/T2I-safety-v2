@@ -17,7 +17,7 @@ import torch
 from matplotlib import pyplot as plt
 
 from huggingface_hub import login
-# login(token="your_hf_token_here")
+# login(token="YOUR_TOKEN")
 
 model = FluxPipeline.from_pretrained("black-forest-labs/FLUX.1-dev", torch_dtype=torch.bfloat16)
 model.to("cuda:0")

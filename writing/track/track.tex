@@ -1,6 +1,6 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{enumitem}
@@ -8,8 +8,9 @@
 \usepackage{tabularx}
 \usepackage{graphicx}
 \usepackage{multirow}
+\usepackage{float}
 
-\title{IntentShield Project Progress Tracker}
+\title{Project Progress Tracker}
 \author{Tim}
 \date{Started: 2026-03-19}
 
@@ -28,7 +29,7 @@
 
 Goal: investigate how reviewers evaluate concept erasure methods on OpenReview, focusing on the two ICLR'26 papers cited in our related work (SPEED, HiRM). Look for any discussion of compositional attacks or structural limitations.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Recent concept erasure methods and their evaluation models.}
 \renewcommand{\arraystretch}{1.5}
@@ -41,9 +42,9 @@ HiRM \scriptsize{[ICLR'26, 4/4/6/4]} & SD 1.4 & (1) Simple extension of RMU to d
 EraseAnything \scriptsize{[ICML'25]} & FLUX.1-dev & N/A (not on OpenReview) \\
 TRACE \scriptsize{[ICLR'26 rejected, 6/6/4/4]} & SD 3.5, FLUX, Infinity-2B/8B, SD 1.5 & (1) No NSFW evaluation despite being key motivation (2) No failure mode discussion for overlapping concepts (3) FID insufficient---should include HPSv3/Aesthetics (4) Limited baselines, missing training-based methods (5) Computational cost not reported \\
 Diversified Unlearning \scriptsize{[ICLR'26 under review, 2/6/6/2]} & SD 1.4 & (1) Only SD 1.4, no generalization to SD 3.5/FLUX (2) Marginal preservation improvements (3) No comparison with adversarial unlearning methods (AdvUnlearn, RACE, RECE) (4) ChatGPT-generated prompts---hallucination risk, unclear how many needed (5) Embedding vector sum may destroy semantics \\
-Prototype-Guided \scriptsize{[arXiv'25]} & SD 1.4, SDXL, SD 3.5 & N/A (arXiv preprint) \\
+Prototype-Guided \scriptsize{[CVPR'26]} & SD 1.4, SDXL, SD 3.5 & N/A \\
 EraseAnything++ \scriptsize{[arXiv'25]} & Flux.1-dev, Open-Sora & N/A (arXiv preprint) \\
-DVE \scriptsize{[arXiv'25]} & Flux.1-dev & N/A (arXiv preprint) \\
+DVE \scriptsize{[ICML'26 under review]} & Flux.1-dev & N/A (arXiv preprint) \\
 SURE \scriptsize{[ICLR'26 under review, 2/4/4/2]} & SD 1.4 & (1) Lipschitz regularization lacks theoretical justification (2) Only tested on similar subcategories, unclear for diverse categories (3) Three of four loss components borrowed from prior work (4) Concept space limited to 100 CLIP words---may miss fine-grained subcategories \\
 \bottomrule
 \end{tabularx}
@@ -90,7 +91,7 @@ SURE \scriptsize{[ICLR'26 under review, 2/4/4/2]} & SD 1.4 & (1) Lipschitz regul
 
 
 \begin{adjustwidth}{1.5em}{}
-\subsubsection{Prototype-Guided Concept Erasure (arXiv'25)}
+\subsubsection{Prototype-Guided Concept Erasure (CVPR'26)}
 
 \begin{itemize}
   \item \textbf{Title:} Prototype-Guided Concept Erasure in Diffusion Models
@@ -116,7 +117,7 @@ SURE \scriptsize{[ICLR'26 under review, 2/4/4/2]} & SD 1.4 & (1) Lipschitz regul
 \end{adjustwidth}
 
 \begin{adjustwidth}{1.5em}{}
-\subsubsection{DVE -- Differential Vector Erasure (arXiv'25)}
+\subsubsection{DVE -- Differential Vector Erasure (ICML'26 under review)}
 
 \begin{itemize}
   \item \textbf{Title:} Differential Vector Erasure: Unified Training-Free Concept Erasure for Flow Matching Models
@@ -154,7 +155,7 @@ Goal: generate 1,000 images from MS-COCO captions (following SPEED's protocol) u
   \item SD~3.5-Medium: 28 inference steps, guidance scale 7.5.
 \end{itemize}
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{CLIP Score ($\times 100$) on 1,000 COCO captions.}
 \begin{tabular}{lcc}
@@ -176,7 +177,7 @@ Goal: demonstrate that existing defense methods fail on compositional attacks (C
 
 Reproduced SPEED's instance erasure on SD~1.4, erasing ``Snoopy''. Left: original SD~1.4; Right: after SPEED erasure.
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.45\textwidth]{figs/snoopy_compare.jpg}
 \includegraphics[width=0.45\textwidth]{figs/snoopy_compare2.jpg}\\[0.5em]
@@ -186,7 +187,7 @@ Reproduced SPEED's instance erasure on SD~1.4, erasing ``Snoopy''. Left: origina
 \label{fig:snoopy}
 \end{figure}
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Existing defense methods to evaluate. ASR (\%) detected by NudeNet (threshold 0.6), lower is better. Results from original papers.}
 \small
@@ -211,9 +212,9 @@ Reproduced SPEED's instance erasure on SD~1.4, erasing ``Snoopy''. Left: origina
  & Div.\ Unlearn \scriptsize{[rejected]} & SD 1.4 & $^*$172 & -- & 38.95 & 0.310 & 14.21 & $^*$I2P NudeNet total count; RaB K16 ASR; best variant (Div-AP) \\
  & EraseAnything \scriptsize{[ICML'25]} & Flux & 4.70 & 11.20 & 58.90 & 0.302 & 21.75 & RaB Ring16; from DVE T2 \\
  & EraseAnything++ \scriptsize{[arXiv'25]} & Flux & $^*$182 & -- & -- & 0.304 & 21.67 & $^*$I2P NudeNet total; TII \\
- & DVE \scriptsize{[arXiv'25]} & Flux & 2.40 & 7.10 & 5.30 & 0.300 & 21.70 & Training-free; RaB Ring16; T2 \\
- & Prototype-Guided \scriptsize{[arXiv'25]} & SD 1.4 & $^\ddagger$5.2 & -- & 6.70 & -- & -- & $^\ddagger$I2P Q16 overall; RaB ASR; T1-2 \\
- & Prototype-Guided \scriptsize{[arXiv'25]} & SD 3.5 & -- & -- & 31.00 & -- & -- & Training-free; RaB ASR; T3 \\
+ & DVE \scriptsize{[ICML'26 under review]} & Flux & 2.40 & 7.10 & 5.30 & 0.300 & 21.70 & Training-free; RaB Ring16; T2 \\
+ & Prototype-Guided \scriptsize{[CVPR'26]} & SD 1.4 & $^\ddagger$5.2 & -- & 6.70 & -- & -- & $^\ddagger$I2P Q16 overall; RaB ASR; T1-2 \\
+ & Prototype-Guided \scriptsize{[CVPR'26]} & SD 3.5 & -- & -- & 31.00 & -- & -- & Training-free; RaB ASR; T3 \\
  & SURE \scriptsize{[under review]} & SD 1.4 & $^\S$1.70 & -- & -- & -- & 14.02 & $^\S$NER-0.3; T2 \\
 \midrule
 Prompt filt. & SafeGuider \scriptsize{[CCS'25]} & SD 1.4 & -- & -- & -- & -- & -- & \\
@@ -259,7 +260,7 @@ scale=0.1, retain=instance.csv & 0.25$\times$ & Image OK but Snoopy preserved \\
 
 Snoopy identity is disrupted but output becomes incoherent --- not a clean erasure.
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.45\textwidth]{figs/sd35_snoopy_doghouse.jpg}
 \includegraphics[width=0.45\textwidth]{figs/sd35_snoopy_woodstock.jpg}\\[0.5em]
@@ -276,6 +277,20 @@ SPEED's null-space projection does not transfer well to MMDiT. The joint attenti
   \item Edit \texttt{context\_embedder} (global 4096$\to$1536 projection) instead of per-block layers.
   \item Adapt EraseAnything's LoRA-based approach (designed for MMDiT).
 \end{itemize}
+
+
+\newpage
+%% ============================================================
+\section{2026-03-20}
+%% ============================================================
+
+\subsection{Task 1: Choose Defense Methods Based on Paradigm}
+
+\subsection{Task 2: Recheck Existing Benchmarks}
+
+\subsection{Task 3: Rethink a Better Way to Tell Attack Story}
+
+\subsection{Task 4: New Method Design Tryout}
 
 
 \end{document}
